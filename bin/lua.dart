@@ -10,11 +10,12 @@ import 'dart:math' show pow;
 
 void main() {
   var env = Env(null);
-  env.bind("print", (args) => [print(args[0])]);
+  env.bind("print", (List args) => [print(args[0])]);
   env.eval(Parser(Scanner("print('hello')")).block());
   env.eval(Parser(Scanner("print(3 + 4)")).block());
   env.eval(Parser(Scanner("for i = 0, 5 do print(i) end")).block());
-  env.eval(Parser(Scanner("function fac(n) if n == 0 then return 1 end; return n * fac(n - 1) end; print(fac(6))")).block());
+  env.eval(
+      Parser(Scanner("function fac(n) if n == 0 then return 1 end; return n * fac(n - 1) end; print(fac(6))")).block());
   env.eval(Parser(Scanner("print({}); print({1, 2}); print({a=1, ['b']=2})")).block());
   env.eval(Parser(Scanner("print(#{1, [2]=2, [4]=4, n=5})")).block());
   env.eval(Parser(Scanner("local a, b = 3, 4; a, b = b, a; print(a..' '..b)")).block());
@@ -30,8 +31,8 @@ void main() {
 
 /// Tables are Lua's main datatype: an associative array with an optional metatable describing the table's behavior.
 class Table {
-  final Map fields = <dynamic, dynamic>{};
-  Table metatable;
+  final fields = <dynamic, dynamic>{};
+  Table? metatable;
 
   Table();
   Table.from(Iterable<dynamic> i) {
@@ -39,8 +40,8 @@ class Table {
     i.forEach((e) => fields[j++] = e);
   }
 
-  dynamic operator [](k) => fields[k];
-  operator []=(k, v) => fields[k] = v;
+  dynamic operator [](dynamic k) => fields[k];
+  operator []=(dynamic k, dynamic v) => fields[k] = v;
   int get length {
     var i = 0;
     while (this[i + 1] != null) {
@@ -92,22 +93,22 @@ typedef Fun = List<dynamic> Function(List<dynamic> args);
 
 /// Environments are used to keep variable bindings and evaluate AST nodes.
 class Env {
-  final Env parent;
-  final Map vars = {};
+  final Env? parent;
+  final Map vars = <String, dynamic>{};
 
   Env(this.parent);
 
   // variables
 
-  void bind(String name, value) {
+  void bind(String name, dynamic value) {
     vars[name] = value;
   }
 
-  void update(String name, value) {
+  void update(String name, dynamic value) {
     if (vars.containsKey(name)) {
       vars[name] = value;
     } else if (parent != null) {
-      parent.update(name, value);
+      parent!.update(name, value);
     } else {
       throw "assignment to unknown variable $name";
     }
@@ -117,7 +118,7 @@ class Env {
     if (vars.containsKey(name)) {
       return vars[name];
     } else if (parent != null) {
-      return parent.lookup(name);
+      return parent!.lookup(name);
     }
     throw "reference of unknown variable $name";
   }
@@ -134,12 +135,12 @@ class Env {
     return exps.map((e) => eval(e)).toList();
   }
 
-  bool isTrue(value) => value != null && value != false;
+  bool isTrue(dynamic value) => value != null && value != false;
 
   // built-in operations
 
   /// Adds two values (see §2.8).
-  static dynamic addEvent(op1, op2) {
+  static dynamic addEvent(dynamic op1, dynamic op2) {
     if (op1 is num && op2 is num) {
       return op1 + op2;
     }
@@ -147,7 +148,7 @@ class Env {
   }
 
   /// Subtracts two values (see §2.8).
-  static dynamic subEvent(op1, op2) {
+  static dynamic subEvent(dynamic op1, dynamic op2) {
     if (op1 is num && op2 is num) {
       return op1 - op2;
     }
@@ -155,7 +156,7 @@ class Env {
   }
 
   /// Multiplies two values (see §2.8).
-  static dynamic mulEvent(op1, op2) {
+  static dynamic mulEvent(dynamic op1, dynamic op2) {
     if (op1 is num && op2 is num) {
       return op1 * op2;
     }
@@ -163,7 +164,7 @@ class Env {
   }
 
   /// Divides two values (see §2.8).
-  static dynamic divEvent(op1, op2) {
+  static dynamic divEvent(dynamic op1, dynamic op2) {
     if (op1 is num && op2 is num) {
       return op1 / op2;
     }
@@ -171,7 +172,7 @@ class Env {
   }
 
   /// Applies "modulo" two values (see §2.8).
-  static dynamic modEvent(op1, op2) {
+  static dynamic modEvent(dynamic op1, dynamic op2) {
     if (op1 is num && op2 is num) {
       return op1 % op2;
     }
@@ -179,7 +180,7 @@ class Env {
   }
 
   /// Applies "power" to two values (see §2.8).
-  static dynamic powEvent(op1, op2) {
+  static dynamic powEvent(dynamic op1, dynamic op2) {
     if (op1 is num && op2 is num) {
       return pow(op1, op2);
     }
@@ -187,7 +188,7 @@ class Env {
   }
 
   /// Applies unary minus (see §2.8).
-  static dynamic unmEvent(op) {
+  static dynamic unmEvent(dynamic op) {
     if (op is num) {
       return -op;
     }
@@ -195,7 +196,7 @@ class Env {
   }
 
   /// Concatenates two values (see §2.8).
-  static dynamic concatEvent(op1, op2) {
+  static dynamic concatEvent(dynamic op1, dynamic op2) {
     if ((op1 is num || op1 is String) && (op2 is num || op2 is String)) {
       return "$op1$op2";
     }
@@ -203,7 +204,7 @@ class Env {
   }
 
   /// Applies length (see §2.8).
-  static dynamic lenEvent(op) {
+  static dynamic lenEvent(dynamic op) {
     if (op is String) {
       return op.length;
     }
@@ -218,54 +219,54 @@ class Env {
   }
 
   /// Compares two values (see §2.8).
-  static bool eqEvent(op1, op2) {
+  static bool eqEvent(dynamic op1, dynamic op2) {
     if (op1 == op2) {
       return true;
     }
     var h = getequalhandler(op1, op2, "__eq");
     if (h != null) {
-      return !!call1(h, [op1, op2]);
+      return call1(h, [op1, op2]) as bool;
     }
     return false;
   }
 
   /// Compares two values (see §2.8).
-  static bool ltEvent(op1, op2) {
+  static bool ltEvent(dynamic op1, dynamic op2) {
     if (op1 is num && op2 is num) {
       return op1 < op2;
     }
     if (op1 is String && op2 is String) {
-      return Comparable.compare(op1, op2) < 0;
+      return op1.compareTo(op2) < 0;
     }
     var h = getbinhandler(op1, op2, "__lt");
     if (h != null) {
-      return !!call1(h, [op1, op2]);
+      return call1(h, [op1, op2]) as bool;
     }
-    throw error("cannot compare $op1 and $op2");
+    throw error("cannot compute $op1 < $op2");
   }
 
   /// Compares two values (see §2.8).
-  static bool leEvent(op1, op2) {
+  static bool leEvent(dynamic op1, dynamic op2) {
     if (op1 is num && op2 is num) {
       return op1 <= op2;
     }
     if (op1 is String && op2 is String) {
-      return Comparable.compare(op1, op2) <= 0;
+      return op1.compareTo(op2) <= 0;
     }
     var h = getbinhandler(op1, op2, "__le");
     if (h != null) {
-      return !!call1(h, [op1, op2]);
+      return call1(h, [op1, op2]) as bool;
     }
     h = getbinhandler(op1, op2, "__lt");
     if (h != null) {
-      return !call1(h, [op2, op1]);
+      return !(call1(h, [op2, op1]) as bool);
     }
-    throw error("cannot compare $op1 and $op2");
+    throw error("cannot compute $op1 <= $op2");
   }
 
   /// Accesses a table field by key (see §2.8).
-  static dynamic indexEvent(table, key) {
-    var h;
+  static dynamic indexEvent(dynamic table, dynamic key) {
+    dynamic h;
     if (table is Table) {
       var v = table[key];
       if (v != null) {
@@ -288,8 +289,8 @@ class Env {
   }
 
   /// Assigns a table field to a new value (see §2.8).
-  static void newindexEvent(table, key, value) {
-    var h;
+  static void newindexEvent(dynamic table, dynamic key, dynamic value) {
+    dynamic h;
     if (table is Table) {
       var v = table[key];
       if (v != null) {
@@ -315,9 +316,9 @@ class Env {
   }
 
   /// Calls a value (see §2.8).
-  static List<dynamic> callEvent(func, args) {
+  static List<dynamic> callEvent(dynamic func, dynamic args) {
     if (func is Fun) {
-      return func(args);
+      return func(args as List<dynamic>);
     }
     var h = metatable(func, "__call");
     if (h != null) {
@@ -327,7 +328,7 @@ class Env {
   }
 
   /// Helper to perform the lookup of an unary operation.
-  static dynamic performUnEvent(op, event, operation) {
+  static dynamic performUnEvent(dynamic op, dynamic event, dynamic operation) {
     var h = metatable(op, event);
     if (h != null) {
       return call1(h, [op]);
@@ -336,7 +337,7 @@ class Env {
   }
 
   /// Helper to perform the lookup of a binary operation.
-  static dynamic performBinEvent(op1, op2, event, operation) {
+  static dynamic performBinEvent(dynamic op1, dynamic op2, String event, dynamic operation) {
     var h = getbinhandler(op1, op2, event);
     if (h != null) {
       return call1(h, [op1, op2]);
@@ -346,13 +347,13 @@ class Env {
 
   /// Returns the handler of the given [event] from either the [op1] value's metatable or the [op2] value's
   /// metatable. Returns [null] if neither [op1] nor [op2] have a metatable and/or such a handler.
-  static Table getbinhandler(op1, op2, String event) {
+  static Table? getbinhandler(dynamic op1, dynamic op2, String event) {
     return metatable(op1, event) ?? metatable(op2, event);
   }
 
   /// Returns the handler of the given [event] from [op1] and [op2] which must be of the same type and share the same
   /// handler. Returns [null] if this is not the case and therefore [op1] and [op2] aren't comparable.
-  static Table getequalhandler(op1, op2, String event) {
+  static Table? getequalhandler(dynamic op1, dynamic op2, String event) {
     if (type(op1) != type(op2)) {
       return null;
     }
@@ -366,14 +367,18 @@ class Env {
 
   /// Returns the given event handler from the value's metatable.
   /// Returns [null] if there is no metatable or no such handler in the metatable.
-  static dynamic metatable(value, event) {
+  static Table? metatable(dynamic value, dynamic event) {
     var mt = getmetatable(value);
-    return mt != null ? mt[event] : null;
+    return mt != null
+        ? mt[event] is Table
+            ? mt[event] as Table
+            : null
+        : null;
   }
 
   /// Returns the metatable of the given [value].
   /// Returns [null] is there is no metatable.
-  static Table getmetatable(value) {
+  static Table? getmetatable(dynamic value) {
     if (value is num) return numMetatable;
     if (value is bool) return boolMetatable;
     if (value is String) return stringMetatable;
@@ -386,19 +391,19 @@ class Env {
   /// reduced to a single value, dropping all additional values. Returns [null] if the
   /// function returned no result. Raises an error if [func] isn't a Function. [args]
   /// must be a List of values.
-  static dynamic call1(func, List<dynamic> args) {
+  static dynamic call1(dynamic func, List<dynamic> args) {
     if (func is Fun) {
       var result = func(args);
-      return result != null && result.isNotEmpty ? result[0] : null;
+      return result.isNotEmpty ? result[0] : null;
     }
     throw error("cannot call $func");
   }
 
   /// Applies [func] with the given arguments and returns the result of the evaluation.
   /// Raises an error if [func] isn't a Function. [args] must be a List of values.
-  static List<dynamic> call(func, List<dynamic> args) {
+  static List<dynamic> call(dynamic func, List<dynamic> args) {
     if (func is Fun) {
-      return func(args) ?? const <dynamic>[];
+      return func(args);
     }
     if (func is Function_) {
       return func.call(args);
@@ -417,7 +422,7 @@ class Env {
   static final Table functionMetatable = Table();
 
   /// Returns the type of the given [value] (see §5.1).
-  static String type(value) {
+  static String type(dynamic value) {
     if (value is num) return "number";
     if (value is bool) return "boolean";
     if (value is String) return "string";
@@ -534,7 +539,8 @@ class NumericFor extends Stat {
     var sto = env.eval(stop);
     var ste = env.eval(step);
     if (sta is! num || sto is! num || ste is! num) throw "runtime error";
-    while ((ste > 0 && sta <= sto) || (ste <= 0 && sta >= sto)) {
+    var i = sta;
+    while ((ste > 0 && i <= sto) || (ste <= 0 && i >= sto)) {
       var newEnv = Env(env);
       newEnv.bind(name, sta);
       try {
@@ -542,7 +548,7 @@ class NumericFor extends Stat {
       } on BreakException {
         break;
       }
-      sta += ste;
+      i += ste;
     }
   }
 }
@@ -687,7 +693,7 @@ class Assign extends Stat {
 
 /// An expression computing a value.
 abstract class Exp extends Node {
-  void set(Env env, value) {
+  void set(Env env, dynamic value) {
     throw "syntax error";
   }
 }
@@ -701,7 +707,7 @@ abstract class Bin extends Exp {
 
 /// Either the first value if not "false" and the second value isn't evaluated or the the second one.
 class Or extends Bin {
-  Or(left, right) : super(left, right);
+  Or(Exp left, Exp right) : super(left, right);
 
   @override
   dynamic eval(Env env) {
@@ -715,7 +721,7 @@ class Or extends Bin {
 
 /// Either the first value if "false" and the second value isn't evaluated or the second one.
 class And extends Bin {
-  And(left, right) : super(left, right);
+  And(Exp left, Exp right) : super(left, right);
 
   @override
   dynamic eval(Env env) {
@@ -729,7 +735,7 @@ class And extends Bin {
 
 /// The `<` operation.
 class Lt extends Bin {
-  Lt(left, right) : super(left, right);
+  Lt(Exp left, Exp right) : super(left, right);
 
   @override
   dynamic eval(Env env) => Env.ltEvent(env.eval(left), env.eval(right));
@@ -737,7 +743,7 @@ class Lt extends Bin {
 
 /// The `>` operation (implemented as `not <=`).
 class Gt extends Bin {
-  Gt(left, right) : super(left, right);
+  Gt(Exp left, Exp right) : super(left, right);
 
   @override
   dynamic eval(Env env) => !Env.leEvent(env.eval(left), env.eval(right));
@@ -745,7 +751,7 @@ class Gt extends Bin {
 
 /// The `<=` operation.
 class Le extends Bin {
-  Le(left, right) : super(left, right);
+  Le(Exp left, Exp right) : super(left, right);
 
   @override
   dynamic eval(Env env) => Env.leEvent(env.eval(left), env.eval(right));
@@ -753,7 +759,7 @@ class Le extends Bin {
 
 /// The `>=` operation (implemented as `not <`).
 class Ge extends Bin {
-  Ge(left, right) : super(left, right);
+  Ge(Exp left, Exp right) : super(left, right);
 
   @override
   dynamic eval(Env env) => !Env.ltEvent(env.eval(left), env.eval(right));
@@ -761,7 +767,7 @@ class Ge extends Bin {
 
 /// The `~=` operation (implemented as `not ==`).
 class Ne extends Bin {
-  Ne(left, right) : super(left, right);
+  Ne(Exp left, Exp right) : super(left, right);
 
   @override
   dynamic eval(Env env) => !Env.eqEvent(env.eval(left), env.eval(right));
@@ -769,7 +775,7 @@ class Ne extends Bin {
 
 /// The `==` operation.
 class Eq extends Bin {
-  Eq(left, right) : super(left, right);
+  Eq(Exp left, Exp right) : super(left, right);
 
   @override
   dynamic eval(Env env) => Env.eqEvent(env.eval(left), env.eval(right));
@@ -777,7 +783,7 @@ class Eq extends Bin {
 
 /// The `..` operation.
 class Concat extends Bin {
-  Concat(left, right) : super(left, right);
+  Concat(Exp left, Exp right) : super(left, right);
 
   @override
   dynamic eval(Env env) => Env.concatEvent(env.eval(left), env.eval(right));
@@ -785,7 +791,7 @@ class Concat extends Bin {
 
 /// The `+` operation.
 class Add extends Bin {
-  Add(left, right) : super(left, right);
+  Add(Exp left, Exp right) : super(left, right);
 
   @override
   dynamic eval(Env env) => Env.addEvent(env.eval(left), env.eval(right));
@@ -793,7 +799,7 @@ class Add extends Bin {
 
 /// The `-` operation.
 class Sub extends Bin {
-  Sub(left, right) : super(left, right);
+  Sub(Exp left, Exp right) : super(left, right);
 
   @override
   dynamic eval(Env env) => Env.subEvent(env.eval(left), env.eval(right));
@@ -801,7 +807,7 @@ class Sub extends Bin {
 
 /// The `*` operation.
 class Mul extends Bin {
-  Mul(left, right) : super(left, right);
+  Mul(Exp left, Exp right) : super(left, right);
 
   @override
   dynamic eval(Env env) => Env.mulEvent(env.eval(left), env.eval(right));
@@ -809,7 +815,7 @@ class Mul extends Bin {
 
 /// The `/` operation.
 class Div extends Bin {
-  Div(left, right) : super(left, right);
+  Div(Exp left, Exp right) : super(left, right);
 
   @override
   dynamic eval(Env env) => Env.divEvent(env.eval(left), env.eval(right));
@@ -817,7 +823,7 @@ class Div extends Bin {
 
 /// The `%` operation.
 class Mod extends Bin {
-  Mod(left, right) : super(left, right);
+  Mod(Exp left, Exp right) : super(left, right);
 
   @override
   dynamic eval(Env env) => Env.modEvent(env.eval(left), env.eval(right));
@@ -830,7 +836,7 @@ class Not extends Exp {
   Not(this.exp);
 
   @override
-  dynamic eval(Env env) => !env.eval(exp);
+  dynamic eval(Env env) => !(env.eval(exp) as bool);
 }
 
 /// The unary `-` operation.
@@ -855,7 +861,7 @@ class Len extends Exp {
 
 /// The `^` operation (power).
 class Pow extends Bin {
-  Pow(left, right) : super(left, right);
+  Pow(Exp left, Exp right) : super(left, right);
 
   @override
   dynamic eval(Env env) => Env.powEvent(env.eval(left), env.eval(right));
@@ -863,7 +869,7 @@ class Pow extends Bin {
 
 /// A literal value, i.e. `nil`, `true`, `false`, a number or a string.
 class Lit extends Exp {
-  final value;
+  final dynamic value;
 
   Lit(this.value);
 
@@ -881,7 +887,7 @@ class Var extends Exp {
   dynamic eval(Env env) => env.lookup(name);
 
   @override
-  void set(Env env, value) => env.update(name, value);
+  void set(Env env, dynamic value) => env.update(name, value);
 }
 
 /// The `[ ]` postfix operation.
@@ -894,7 +900,7 @@ class Index extends Exp {
   dynamic eval(Env env) => Env.indexEvent(env.eval(table), env.eval(key));
 
   @override
-  void set(Env env, value) => Env.newindexEvent(env.eval(table), env.eval(key), value);
+  void set(Env env, dynamic value) => Env.newindexEvent(env.eval(table), env.eval(key), value);
 }
 
 /// Represents something that can be called and will return a list of arguments.
@@ -963,7 +969,8 @@ class TableConst extends Exp {
 /// Private class to represent a table field.
 /// See [Table].
 class Field {
-  final Exp key, value;
+  final Exp? key;
+  final Exp value;
 
   Field(this.key, this.value);
 
@@ -971,7 +978,7 @@ class Field {
     if (key == null) {
       table[table.length + 1] = env.eval(value);
     } else {
-      table[env.eval(key)] = env.eval(value);
+      table[env.eval(key!)] = env.eval(value);
     }
   }
 }
@@ -984,8 +991,8 @@ class Field {
 /// Some tokens have an associated value. The empty token represents the end of input.
 class Scanner {
   final Iterator<Match> matches;
-  Object value;
-  String token;
+  Object? value;
+  late String token;
 
   Scanner(String source)
       : matches = RegExp("\\s*(?:([-+*/%^#(){}\\[\\];:,]|[<>=]=?|~=|\\.{1,3})|(\\d+(?:\\.\\d+)?)|"
@@ -1004,17 +1011,17 @@ class Scanner {
       var match = matches.current;
       if (match.group(1) != null) {
         value = match.group(1);
-        return value;
+        return value as String;
       }
       if (match.group(2) != null) {
-        value = double.parse(match.group(2));
+        value = double.parse(match.group(2)!);
         return "Number";
       }
       if (match.group(3) != null) {
         value = match.group(3);
-        return KEYWORDS.contains(value) ? value : "Name";
+        return KEYWORDS.contains(value) ? value as String : "Name";
       }
-      value = unescape(match.group(4).substring(1, match.group(4).length - 1));
+      value = unescape(match.group(4)!.substring(1, match.group(4)!.length - 1));
       return "String";
     }
     return "";
@@ -1022,7 +1029,7 @@ class Scanner {
 
   static String unescape(String s) {
     return s.replaceAllMapped(RegExp("\\\\(u....|.)"), (Match m) {
-      var c = m.group(1);
+      var c = m.group(1)!;
       if (c == 'b') return '\b';
       if (c == 'f') return '\f';
       if (c == 'n') return '\n';
@@ -1033,8 +1040,9 @@ class Scanner {
     });
   }
 
-  static final Set<String> KEYWORDS =
-      Set.of("and break do else elseif end false for function if in local nil not or repeat return then true until while".split(" "));
+  static final Set<String> KEYWORDS = Set.of(
+      "and break do else elseif end false for function if in local nil not or repeat return then true until while"
+          .split(" "));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1049,7 +1057,7 @@ class Parser {
 
   // helpers
 
-  Object value() {
+  Object? value() {
     var v = scanner.value;
     scanner.advance();
     return v;
@@ -1237,7 +1245,7 @@ class Parser {
   }
 
   /// Parses a `Name` or raises a syntax error.
-  String name() => peek("Name") ? value() : throw error("Name expected");
+  String name() => peek("Name") ? value() as String : throw error("Name expected");
 
   /// Parses a `stat` according to
   ///
@@ -1253,7 +1261,7 @@ class Parser {
       return LocalFuncDef(n, p, b);
     }
     var n = namelist();
-    var e = at("=") ? explist() : null;
+    var e = at("=") ? explist() : const <Exp>[];
     return Local(n, e);
   }
 
@@ -1396,7 +1404,7 @@ class Parser {
     if (at("false")) return Lit(false);
     if (peek("Number")) return Lit(value());
     if (peek("String")) return Lit(value());
-    if (peek("...")) return Var(value());
+    if (peek("...")) return Var(value() as String);
     if (at("function")) {
       var p = parlist(), b = block();
       end();

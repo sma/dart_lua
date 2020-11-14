@@ -1,14 +1,8 @@
 include: package:pedantic/analysis_options.yaml
 
-linter:
-  rules:
-    prefer_single_quotes: true
-
 analyzer:
   errors:
-    deprecated_function_class_declaration: false
+    todo: false
   strong-mode:
     implicit-casts: false
-    implicit-dynamic: false
-  enable-experiment:
-    - non-nullable
+    implicit-dynamic: true
