@@ -1,11 +1,11 @@
 // Copyright 2013, 2020 Stefan Matthias Aust. Licensed under MIT (http://opensource.org/licenses/MIT)
-import 'dart:math' show pow;
-
-// ignore_for_file: prefer_single_quotes
+import "dart:math" show pow;
 
 /*
- * This is a parser and runtime system for Lua 5.x which lacks most if not all of the Lua standard library.
- * I created the parser a couple of years ago and now ported it to Dart just to see how difficult it would be.
+ * This is a parser and runtime system for Lua 5.x which lacks most if not 
+ * all of the Lua standard library. I created the parser a couple of years 
+ * ago and now ported it to Dart just to see how difficult it would be.
+ *  -sma, 2013
  */
 
 void main() {
@@ -29,19 +29,22 @@ void main() {
 // Runtime system
 // --------------------------------------------------------------------------------------------------------------------
 
-/// Tables are Lua's main datatype: an associative array with an optional metatable describing the table's behavior.
+/// Tables are Lua's main datatype: an associative array with an optional
+/// metatable describing the table's behavior. It can be used like and
+/// array or like an dictionary a.k.a. hash map. It can also be used like
+/// instances of classes.
 class Table {
-  final fields = <dynamic, dynamic>{};
-  Table? metatable;
-
   Table();
   Table.from(Iterable<dynamic> i) {
     var j = 1;
     i.forEach((e) => fields[j++] = e);
   }
 
+  final fields = <dynamic, dynamic>{};
+  Table? metatable;
+
   dynamic operator [](dynamic k) => fields[k];
-  operator []=(dynamic k, dynamic v) => fields[k] = v;
+  void operator []=(dynamic k, dynamic v) => fields[k] = v;
   int get length {
     var i = 0;
     while (this[i + 1] != null) {
@@ -55,12 +58,12 @@ class Table {
 }
 
 /// Functions are defined by the user and bound to the environment.
-class Function_ {
+class UserFunc {
+  UserFunc(this.env, this.params, this.block);
+
   final Env env;
   final List<String> params;
   final Block block;
-
-  Function_(this.env, this.params, this.block);
 
   List<dynamic> call(List<dynamic> args) {
     var newEnv = Env(env);
@@ -84,7 +87,7 @@ class Function_ {
   }
 
   @override
-  String toString() => '<func>';
+  String toString() => "<func>";
 }
 
 /// Common function type for built-in functions and user defined functions.
@@ -93,10 +96,10 @@ typedef Fun = List<dynamic> Function(List<dynamic> args);
 
 /// Environments are used to keep variable bindings and evaluate AST nodes.
 class Env {
+  Env(this.parent);
+
   final Env? parent;
   final Map vars = <String, dynamic>{};
-
-  Env(this.parent);
 
   // variables
 
@@ -129,10 +132,10 @@ class Env {
     if (exps.isNotEmpty) {
       var last = exps[exps.length - 1];
       if (last is Call) {
-        return exps.sublist(0, exps.length - 1).map((e) => eval(e)).toList()..addAll(last.evalList(this));
+        return exps.sublist(0, exps.length - 1).map(eval).toList()..addAll(last.evalList(this));
       }
     }
-    return exps.map((e) => eval(e)).toList();
+    return exps.map(eval).toList();
   }
 
   bool isTrue(dynamic value) => value != null && value != false;
@@ -346,13 +349,13 @@ class Env {
   }
 
   /// Returns the handler of the given [event] from either the [op1] value's metatable or the [op2] value's
-  /// metatable. Returns [null] if neither [op1] nor [op2] have a metatable and/or such a handler.
+  /// metatable. Returns `null` if neither [op1] nor [op2] have a metatable and/or such a handler.
   static Table? getbinhandler(dynamic op1, dynamic op2, String event) {
     return metatable(op1, event) ?? metatable(op2, event);
   }
 
   /// Returns the handler of the given [event] from [op1] and [op2] which must be of the same type and share the same
-  /// handler. Returns [null] if this is not the case and therefore [op1] and [op2] aren't comparable.
+  /// handler. Returns `null` if this is not the case and therefore [op1] and [op2] aren't comparable.
   static Table? getequalhandler(dynamic op1, dynamic op2, String event) {
     if (type(op1) != type(op2)) {
       return null;
@@ -366,7 +369,7 @@ class Env {
   }
 
   /// Returns the given event handler from the value's metatable.
-  /// Returns [null] if there is no metatable or no such handler in the metatable.
+  /// Returns `null` if there is no metatable or no such handler in the metatable.
   static Table? metatable(dynamic value, dynamic event) {
     var mt = getmetatable(value);
     return mt != null
@@ -377,7 +380,7 @@ class Env {
   }
 
   /// Returns the metatable of the given [value].
-  /// Returns [null] is there is no metatable.
+  /// Returns `null` is there is no metatable.
   static Table? getmetatable(dynamic value) {
     if (value is num) return numMetatable;
     if (value is bool) return boolMetatable;
@@ -388,7 +391,7 @@ class Env {
   }
 
   /// Applies [func] with the given arguments and returns the result of the evaluation,
-  /// reduced to a single value, dropping all additional values. Returns [null] if the
+  /// reduced to a single value, dropping all additional values. Returns `null` if the
   /// function returned no result. Raises an error if [func] isn't a Function. [args]
   /// must be a List of values.
   static dynamic call1(dynamic func, List<dynamic> args) {
@@ -405,7 +408,7 @@ class Env {
     if (func is Fun) {
       return func(args);
     }
-    if (func is Function_) {
+    if (func is UserFunc) {
       return func.call(args);
     }
     throw error("cannot call $func");
@@ -434,11 +437,11 @@ class Env {
 }
 
 /// Signals returning values from a user defined function.
-/// See [Function.call] and [Return.eval].
+/// See [UserFunc.call] and [Return.eval].
 class ReturnException {
-  final List<dynamic> args;
-
   ReturnException(this.args);
+
+  final List<dynamic> args;
 }
 
 /// Signals breaking a `while`, `repeat` or `for` loop.
@@ -463,9 +466,9 @@ abstract class Stat extends Node {
 /// A sequence of statements, evaluated sequentially for their side effects, returns nothing.
 /// @see §3.3.1, §3.3.2
 class Block extends Stat {
-  final List<Node> stats;
-
   Block(this.stats);
+
+  final List<Node> stats;
 
   @override
   void eval(Env env) => stats.forEach((stat) => env.eval(stat));
@@ -474,10 +477,10 @@ class Block extends Stat {
 /// A `while do` loop statement, can be stopped with `break`.
 /// @see §3.3.4
 class While extends Stat {
+  While(this.exp, this.block);
+
   final Exp exp;
   final Block block;
-
-  While(this.exp, this.block);
 
   @override
   dynamic eval(Env env) {
@@ -494,10 +497,10 @@ class While extends Stat {
 /// A `repeat until` loop statement, can be stopped with `break`.
 /// @see §3.3.4
 class Repeat extends Stat {
+  Repeat(this.exp, this.block);
+
   final Exp exp;
   final Block block;
-
-  Repeat(this.exp, this.block);
 
   @override
   dynamic eval(Env env) {
@@ -514,10 +517,10 @@ class Repeat extends Stat {
 /// An `if then else` conditional statement.
 /// @see §3.3.4
 class If extends Stat {
+  If(this.exp, this.thenBlock, this.elseBlock);
+
   final Exp exp;
   final Block thenBlock, elseBlock;
-
-  If(this.exp, this.thenBlock, this.elseBlock);
 
   @override
   dynamic eval(Env env) => env.eval(env.isTrue(env.eval(exp)) ? thenBlock : elseBlock);
@@ -527,11 +530,11 @@ class If extends Stat {
 /// It's an error if the three arguments don't evaluate to numbers.
 /// @see §3.3.5
 class NumericFor extends Stat {
+  NumericFor(this.name, this.start, this.stop, this.step, this.block);
+
   final String name;
   final Exp start, stop, step;
   final Block block;
-
-  NumericFor(this.name, this.start, this.stop, this.step, this.block);
 
   @override
   void eval(Env env) async {
@@ -556,26 +559,29 @@ class NumericFor extends Stat {
 /// A generic `for` loop statement, can be stopped with `break`.
 /// @see §3.3.5.
 class GenericFor extends Stat {
+  GenericFor(this.names, this.exps, this.block);
+
   final List<String> names;
   final List<Exp> exps;
   final Block block;
-
-  GenericFor(this.names, this.exps, this.block);
 
   @override
   dynamic eval(Env env) {
     return Block([
       Local(["f", "s", "v"], exps),
       While(
-          Lit(true),
-          Block([
+        Lit(true),
+        Block(
+          [
             Local(names, [
               FuncCall(Var("f"), [Var("s"), Var("v")])
             ]),
             If(Eq(Var(names[0]), Lit(null)), Block([Break()]), Block([])),
             Assign([Var("v")], [Var(names[0])]),
             ...block.stats,
-          ]))
+          ],
+        ),
+      )
     ]).eval(env);
   }
 }
@@ -583,11 +589,11 @@ class GenericFor extends Stat {
 /// Function definition (see §3.4.10).
 /// Actually, this isn't strictly needed.
 class FuncDef extends Stat {
+  FuncDef(this.names, this.params, this.block);
+
   final List<String> names;
   final List<String> params;
   final Block block;
-
-  FuncDef(this.names, this.params, this.block);
 
   @override
   void eval(Env env) {
@@ -607,12 +613,12 @@ class FuncDef extends Stat {
 /// Method definition (see §3.4.10).
 /// Actually, this isn't strictly needed.
 class MethDef extends Stat {
+  MethDef(this.names, this.method, this.params, this.block);
+
   final List<String> names;
   final String method;
   final List<String> params;
   final Block block;
-
-  MethDef(this.names, this.method, this.params, this.block);
 
   @override
   void eval(Env env) {
@@ -627,11 +633,11 @@ class MethDef extends Stat {
 /// Local function definition (see §3.4.10).
 /// Actually, this isn't strictly needed.
 class LocalFuncDef extends Stat {
+  LocalFuncDef(this.name, this.params, this.block);
+
   final String name;
   final List<String> params;
   final Block block;
-
-  LocalFuncDef(this.name, this.params, this.block);
 
   @override
   void eval(Env env) {
@@ -642,10 +648,10 @@ class LocalFuncDef extends Stat {
 
 /// Defines and optionally initializes local variables (see §3.3.7).
 class Local extends Stat {
+  Local(this.names, this.exps);
+
   final List<String> names;
   final List<Exp> exps;
-
-  Local(this.names, this.exps);
 
   @override
   void eval(Env env) {
@@ -659,9 +665,9 @@ class Local extends Stat {
 /// A `return` statement.
 /// @see 3.3.4
 class Return extends Stat {
-  final List<Exp> exps;
-
   Return(this.exps);
+
+  final List<Exp> exps;
 
   @override
   void eval(Env env) => throw ReturnException(env.evalToList(exps));
@@ -677,10 +683,10 @@ class Break extends Stat {
 /// Assigment of multiple values.
 /// @see §3.3.3.
 class Assign extends Stat {
+  Assign(this.vars, this.exps);
+
   final List<Exp> vars;
   final List<Exp> exps;
-
-  Assign(this.vars, this.exps);
 
   @override
   void eval(Env env) {
@@ -700,14 +706,15 @@ abstract class Exp extends Node {
 
 /// A binary operation, only existing so that I don't have to declare [left] and [right] in every subclass.
 abstract class Bin extends Exp {
-  final Exp left, right;
-
   Bin(this.left, this.right);
+
+  final Exp left;
+  final Exp right;
 }
 
 /// Either the first value if not "false" and the second value isn't evaluated or the the second one.
 class Or extends Bin {
-  Or(Exp left, Exp right) : super(left, right);
+  Or(super.left, super.right);
 
   @override
   dynamic eval(Env env) {
@@ -721,7 +728,7 @@ class Or extends Bin {
 
 /// Either the first value if "false" and the second value isn't evaluated or the second one.
 class And extends Bin {
-  And(Exp left, Exp right) : super(left, right);
+  And(super.left, super.right);
 
   @override
   dynamic eval(Env env) {
@@ -735,7 +742,7 @@ class And extends Bin {
 
 /// The `<` operation.
 class Lt extends Bin {
-  Lt(Exp left, Exp right) : super(left, right);
+  Lt(super.left, super.right);
 
   @override
   dynamic eval(Env env) => Env.ltEvent(env.eval(left), env.eval(right));
@@ -743,7 +750,7 @@ class Lt extends Bin {
 
 /// The `>` operation (implemented as `not <=`).
 class Gt extends Bin {
-  Gt(Exp left, Exp right) : super(left, right);
+  Gt(super.left, super.right);
 
   @override
   dynamic eval(Env env) => !Env.leEvent(env.eval(left), env.eval(right));
@@ -751,7 +758,7 @@ class Gt extends Bin {
 
 /// The `<=` operation.
 class Le extends Bin {
-  Le(Exp left, Exp right) : super(left, right);
+  Le(super.left, super.right);
 
   @override
   dynamic eval(Env env) => Env.leEvent(env.eval(left), env.eval(right));
@@ -759,7 +766,7 @@ class Le extends Bin {
 
 /// The `>=` operation (implemented as `not <`).
 class Ge extends Bin {
-  Ge(Exp left, Exp right) : super(left, right);
+  Ge(super.left, super.right);
 
   @override
   dynamic eval(Env env) => !Env.ltEvent(env.eval(left), env.eval(right));
@@ -767,7 +774,7 @@ class Ge extends Bin {
 
 /// The `~=` operation (implemented as `not ==`).
 class Ne extends Bin {
-  Ne(Exp left, Exp right) : super(left, right);
+  Ne(super.left, super.right);
 
   @override
   dynamic eval(Env env) => !Env.eqEvent(env.eval(left), env.eval(right));
@@ -775,7 +782,7 @@ class Ne extends Bin {
 
 /// The `==` operation.
 class Eq extends Bin {
-  Eq(Exp left, Exp right) : super(left, right);
+  Eq(super.left, super.right);
 
   @override
   dynamic eval(Env env) => Env.eqEvent(env.eval(left), env.eval(right));
@@ -783,7 +790,7 @@ class Eq extends Bin {
 
 /// The `..` operation.
 class Concat extends Bin {
-  Concat(Exp left, Exp right) : super(left, right);
+  Concat(super.left, super.right);
 
   @override
   dynamic eval(Env env) => Env.concatEvent(env.eval(left), env.eval(right));
@@ -791,7 +798,7 @@ class Concat extends Bin {
 
 /// The `+` operation.
 class Add extends Bin {
-  Add(Exp left, Exp right) : super(left, right);
+  Add(super.left, super.right);
 
   @override
   dynamic eval(Env env) => Env.addEvent(env.eval(left), env.eval(right));
@@ -799,7 +806,7 @@ class Add extends Bin {
 
 /// The `-` operation.
 class Sub extends Bin {
-  Sub(Exp left, Exp right) : super(left, right);
+  Sub(super.left, super.right);
 
   @override
   dynamic eval(Env env) => Env.subEvent(env.eval(left), env.eval(right));
@@ -807,7 +814,7 @@ class Sub extends Bin {
 
 /// The `*` operation.
 class Mul extends Bin {
-  Mul(Exp left, Exp right) : super(left, right);
+  Mul(super.left, super.right);
 
   @override
   dynamic eval(Env env) => Env.mulEvent(env.eval(left), env.eval(right));
@@ -815,7 +822,7 @@ class Mul extends Bin {
 
 /// The `/` operation.
 class Div extends Bin {
-  Div(Exp left, Exp right) : super(left, right);
+  Div(super.left, super.right);
 
   @override
   dynamic eval(Env env) => Env.divEvent(env.eval(left), env.eval(right));
@@ -823,7 +830,7 @@ class Div extends Bin {
 
 /// The `%` operation.
 class Mod extends Bin {
-  Mod(Exp left, Exp right) : super(left, right);
+  Mod(super.left, super.right);
 
   @override
   dynamic eval(Env env) => Env.modEvent(env.eval(left), env.eval(right));
@@ -831,9 +838,9 @@ class Mod extends Bin {
 
 /// The `not` operation.
 class Not extends Exp {
-  final Exp exp;
-
   Not(this.exp);
+
+  final Exp exp;
 
   @override
   dynamic eval(Env env) => !(env.eval(exp) as bool);
@@ -841,9 +848,9 @@ class Not extends Exp {
 
 /// The unary `-` operation.
 class Neg extends Exp {
-  final Exp exp;
-
   Neg(this.exp);
+
+  final Exp exp;
 
   @override
   dynamic eval(Env env) => Env.unmEvent(env.eval(exp));
@@ -851,9 +858,9 @@ class Neg extends Exp {
 
 /// The unary `#` operation (length of strings and tables).
 class Len extends Exp {
-  final Exp exp;
-
   Len(this.exp);
+
+  final Exp exp;
 
   @override
   dynamic eval(Env env) => Env.lenEvent(env.eval(exp));
@@ -861,7 +868,7 @@ class Len extends Exp {
 
 /// The `^` operation (power).
 class Pow extends Bin {
-  Pow(Exp left, Exp right) : super(left, right);
+  Pow(super.left, super.right);
 
   @override
   dynamic eval(Env env) => Env.powEvent(env.eval(left), env.eval(right));
@@ -869,9 +876,9 @@ class Pow extends Bin {
 
 /// A literal value, i.e. `nil`, `true`, `false`, a number or a string.
 class Lit extends Exp {
-  final dynamic value;
-
   Lit(this.value);
+
+  final dynamic value;
 
   @override
   dynamic eval(Env env) => value;
@@ -879,9 +886,9 @@ class Lit extends Exp {
 
 /// A variable reference.
 class Var extends Exp {
-  final String name;
-
   Var(this.name);
+
+  final String name;
 
   @override
   dynamic eval(Env env) => env.lookup(name);
@@ -892,9 +899,9 @@ class Var extends Exp {
 
 /// The `[ ]` postfix operation.
 class Index extends Exp {
-  final Exp table, key;
-
   Index(this.table, this.key);
+
+  final Exp table, key;
 
   @override
   dynamic eval(Env env) => Env.indexEvent(env.eval(table), env.eval(key));
@@ -916,11 +923,11 @@ abstract class Call extends Exp {
 
 /// Calling a method.
 class MethCall extends Call {
+  MethCall(this.receiver, this.method, this.args);
+
   final Exp receiver;
   final String method;
   final List<Exp> args;
-
-  MethCall(this.receiver, this.method, this.args);
 
   @override
   List<dynamic> evalList(Env env) {
@@ -932,10 +939,10 @@ class MethCall extends Call {
 
 /// Calling a function.
 class FuncCall extends Call {
+  FuncCall(this.func, this.args);
+
   final Exp func;
   final List<Exp> args;
-
-  FuncCall(this.func, this.args);
 
   @override
   List<dynamic> evalList(Env env) => Env.call(env.eval(func), env.evalToList(args));
@@ -943,20 +950,20 @@ class FuncCall extends Call {
 
 /// Defining a function literal bound to the current environment.
 class Func extends Exp {
+  Func(this.params, this.block);
+
   final List<String> params;
   final Block block;
 
-  Func(this.params, this.block);
-
   @override
-  dynamic eval(Env env) => Function_(env, params, block);
+  dynamic eval(Env env) => UserFunc(env, params, block);
 }
 
 /// Creating a table. See [Field].
 class TableConst extends Exp {
-  final List<Field> fields;
-
   TableConst(this.fields);
+
+  final List<Field> fields;
 
   @override
   dynamic eval(Env env) {
@@ -969,10 +976,10 @@ class TableConst extends Exp {
 /// Private class to represent a table field.
 /// See [Table].
 class Field {
+  Field(this.key, this.value);
+
   final Exp? key;
   final Exp value;
-
-  Field(this.key, this.value);
 
   void addTo(Table table, Env env) {
     if (key == null) {
@@ -990,10 +997,6 @@ class Field {
 /// The scanner breaks the source string into tokens using a fancy regular expression.
 /// Some tokens have an associated value. The empty token represents the end of input.
 class Scanner {
-  final Iterator<Match> matches;
-  Object? value;
-  late String token;
-
   Scanner(String source)
       : matches = RegExp("\\s*(?:([-+*/%^#(){}\\[\\];:,]|[<>=]=?|~=|\\.{1,3})|(\\d+(?:\\.\\d+)?)|"
                 "(\\w+)|('(?:\\\\.|[^'])*'|\"(?:\\\\.|[^\"])*\"))")
@@ -1001,6 +1004,10 @@ class Scanner {
             .iterator {
     advance();
   }
+
+  final Iterator<Match> matches;
+  Object? value;
+  late String token;
 
   void advance() {
     token = nextToken();
@@ -1011,7 +1018,7 @@ class Scanner {
       var match = matches.current;
       if (match.group(1) != null) {
         value = match.group(1);
-        return value as String;
+        return value! as String;
       }
       if (match.group(2) != null) {
         value = double.parse(match.group(2)!);
@@ -1019,7 +1026,7 @@ class Scanner {
       }
       if (match.group(3) != null) {
         value = match.group(3);
-        return KEYWORDS.contains(value) ? value as String : "Name";
+        return _keywords.contains(value) ? value! as String : "Name";
       }
       value = unescape(match.group(4)!.substring(1, match.group(4)!.length - 1));
       return "String";
@@ -1028,8 +1035,8 @@ class Scanner {
   }
 
   static String unescape(String s) {
-    return s.replaceAllMapped(RegExp("\\\\(u....|.)"), (Match m) {
-      var c = m.group(1)!;
+    return s.replaceAllMapped(RegExp("\\\\(u....|.)"), (match) {
+      var c = match[1]!;
       if (c == 'b') return '\b';
       if (c == 'f') return '\f';
       if (c == 'n') return '\n';
@@ -1040,7 +1047,7 @@ class Scanner {
     });
   }
 
-  static final Set<String> KEYWORDS = Set.of(
+  static final Set<String> _keywords = Set.of(
       "and break do else elseif end false for function if in local nil not or repeat return then true until while"
           .split(" "));
 }
@@ -1051,9 +1058,9 @@ class Scanner {
 
 /// The parser combines tokens from a [Scanner] into AST nodes ([Block], [Stat] and [Exp]).
 class Parser {
-  final Scanner scanner;
-
   Parser(this.scanner);
+
+  final Scanner scanner;
 
   // helpers
 
@@ -1073,7 +1080,7 @@ class Parser {
   }
 
   void expect(String token) {
-    if (!at(token)) throw error("expected " + token);
+    if (!at(token)) throw error("expected $token");
   }
 
   bool isEnd() => ["", "else", "elseif", "end", "until"].any(peek);
@@ -1245,7 +1252,7 @@ class Parser {
   }
 
   /// Parses a `Name` or raises a syntax error.
-  String name() => peek("Name") ? value() as String : throw error("Name expected");
+  String name() => peek("Name") ? value()! as String : throw error("Name expected");
 
   /// Parses a `stat` according to
   ///
@@ -1297,22 +1304,23 @@ class Parser {
   }
 
   /// Parses an expression according to
-  ///
-  ///     exp = "nil" | "false" | "true" | Number | String | "..." |
-  ///       function | prefixexp | tableconstructor | exp binop exp |
-  ///       unop exp
-  ///     function = "function" funcbody
-  ///     funcbody = "(" [parlist] ")" block "end"
-  ///     parlist = namelist ["," "..."] | "..."
-  ///     prefixexp = var | funcall | "(" exp ")"
-  ///     funcall = prefixexp [":" Name] args
-  ///     tableconstructor = { [fieldlist] }
-  ///     fieldlist = field {fieldsep field} [fieldsep]
-  ///     field = "[" exp "]" "=" exp | Name "=" exp | exp
-  ///     fieldsep = "," | ";"
-  ///     binop = "+" | "-" | "*" | "/" | "^" | "%" | ".." | "<" | "<=" |
-  ///       ">" | ">=" | "==" | "~=" | "and" | "or"
-  ///     unop = "-" | "not" | "#"
+  /// ```
+  /// exp = "nil" | "false" | "true" | Number | String | "..." |
+  ///   function | prefixexp | tableconstructor | exp binop exp |
+  ///   unop exp
+  /// function = "function" funcbody
+  /// funcbody = "(" [parlist] ")" block "end"
+  /// parlist = namelist ["," "..."] | "..."
+  /// prefixexp = var | funcall | "(" exp ")"
+  /// funcall = prefixexp [":" Name] args
+  /// tableconstructor = { [fieldlist] }
+  /// fieldlist = field {fieldsep field} [fieldsep]
+  /// field = "[" exp "]" "=" exp | Name "=" exp | exp
+  /// fieldsep = "," | ";"
+  /// binop = "+" | "-" | "*" | "/" | "^" | "%" | ".." | "<" | "<=" |
+  ///   ">" | ">=" | "==" | "~=" | "and" | "or"
+  /// unop = "-" | "not" | "#"
+  /// ```
   Exp exp() {
     var e = expAnd();
     while (at("or")) {
@@ -1342,7 +1350,9 @@ class Parser {
         e = Ge(e, expConcat());
       } else if (at("~=")) {
         e = Ne(e, expConcat());
-      } else if (at("==")) e = Eq(e, expConcat());
+      } else if (at("==")) {
+        e = Eq(e, expConcat());
+      }
     }
     return e;
   }
@@ -1360,7 +1370,9 @@ class Parser {
     while (peek("+") || peek("-")) {
       if (at("+")) {
         e = Add(e, expMul());
-      } else if (at("-")) e = Sub(e, expMul());
+      } else if (at("-")) {
+        e = Sub(e, expMul());
+      }
     }
     return e;
   }
@@ -1372,7 +1384,9 @@ class Parser {
         e = Mul(e, expUn());
       } else if (at("/")) {
         e = Div(e, expUn());
-      } else if (at("%")) e = Mod(e, expUn());
+      } else if (at("%")) {
+        e = Mod(e, expUn());
+      }
     }
     return e;
   }
@@ -1470,10 +1484,11 @@ class Parser {
   }
 
   /// Parses a `tableconstructor` according to
-  ///
-  ///     tableconstructor = { [fieldlist] }
-  ///     fieldlist = field {fieldsep field} [fieldsep]
-  ///     fieldsep = "," | ";"
+  /// ```
+  /// tableconstructor = { [fieldlist] }
+  /// fieldlist = field {fieldsep field} [fieldsep]
+  /// fieldsep = "," | ";"
+  /// ```
   Exp tableConstructor() {
     var fields = <Field>[];
     while (!at("}")) {
