@@ -2,7 +2,7 @@
 import "dart:math" show pow;
 
 /*
- * This is a parser and runtime system for Lua 5.x which lacks most if not 
+ * This is a parser and runtime system for Lua 5.1 which lacks most if not 
  * all of the Lua standard library. I created the parser a couple of years 
  * ago and now ported it to Dart just to see how difficult it would be.
  *  -sma, 2013

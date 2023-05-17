@@ -1,6 +1,6 @@
 # Lua
 
-An untested and incomplete interpreter for Lua 5.
+An untested and incomplete interpreter for Lua 5.1.
 
 The interpreter uses Dart types for the usual Lua values like numbers or strings, as well as `Table` and `UserFunc` instances for, well Lua tables and functions. Dart functions which conform to the `Fun` Dart type like `UserFunc` does, can be used to create built-in functions.
 
