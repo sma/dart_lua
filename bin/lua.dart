@@ -37,7 +37,7 @@ const nil = Object();
 /// metatable describing the table's behavior. It can be used like and
 /// array or like an dictionary a.k.a. hash map. It can also be used like
 /// instances of classes.
-class Table {
+final class Table {
   Table();
   Table.from(Iterable<Object> i) {
     var j = 1;
@@ -62,7 +62,8 @@ class Table {
 }
 
 /// Functions are defined by the user and bound to the environment.
-class UserFunc {
+/// The [call] method conforms to [Fun].
+final class UserFunc {
   UserFunc(this.env, this.params, this.block);
 
   final Env env;
@@ -99,7 +100,7 @@ class UserFunc {
 typedef Fun = List<Object> Function(List<Object> args);
 
 /// Environments are used to keep variable bindings and evaluate AST nodes.
-class Env {
+final class Env {
   Env(this.parent);
 
   final Env? parent;
@@ -178,7 +179,7 @@ class Env {
     return performBinEvent(op1, op2, "__div", "divide");
   }
 
-  /// Applies "modulo" two values (see §2.8).
+  /// Applies "modulo" to two values (see §2.8).
   static Object modEvent(Object op1, Object op2) {
     if (op1 is num && op2 is num) {
       return op1 % op2;
@@ -452,7 +453,7 @@ class Env {
 
 /// Signals returning values from a user defined function.
 /// See [UserFunc.call] and [Return.exec].
-class ReturnException {
+final class ReturnException {
   ReturnException(this.args);
 
   final List<Object> args;
@@ -460,20 +461,20 @@ class ReturnException {
 
 /// Signals breaking a `while`, `repeat` or `for` loop.
 /// See [While.exec], [Repeat.exec], [NumericFor.exec], [GenericFor.exec] and [Break.exec].
-class BreakException {}
+final class BreakException {}
 
 // --------------------------------------------------------------------------------------------------------------------
 // AST
 // --------------------------------------------------------------------------------------------------------------------
 
 /// A statement, evaluated for its side effect, returns nothing.
-abstract class Stat {
+sealed class Stat {
   void exec(Env env);
 }
 
 /// A sequence of statements, evaluated sequentially for their side effects, returns nothing.
 /// @see §3.3.1, §3.3.2
-class Block extends Stat {
+final class Block extends Stat {
   Block(this.stats);
 
   final List<Stat> stats;
@@ -484,7 +485,7 @@ class Block extends Stat {
 
 /// A `while do` loop statement, can be stopped with `break`.
 /// @see §3.3.4
-class While extends Stat {
+final class While extends Stat {
   While(this.exp, this.block);
 
   final Exp exp;
@@ -504,7 +505,7 @@ class While extends Stat {
 
 /// A `repeat until` loop statement, can be stopped with `break`.
 /// @see §3.3.4
-class Repeat extends Stat {
+final class Repeat extends Stat {
   Repeat(this.exp, this.block);
 
   final Exp exp;
@@ -524,7 +525,7 @@ class Repeat extends Stat {
 
 /// An `if then else` conditional statement.
 /// @see §3.3.4
-class If extends Stat {
+final class If extends Stat {
   If(this.exp, this.thenBlock, this.elseBlock);
 
   final Exp exp;
@@ -537,7 +538,7 @@ class If extends Stat {
 /// A numeric `for` loop statement, can be stopped with `break`.
 /// It's an error if the three arguments don't evaluate to numbers.
 /// @see §3.3.5
-class NumericFor extends Stat {
+final class NumericFor extends Stat {
   NumericFor(this.name, this.start, this.stop, this.step, this.block);
 
   final String name;
@@ -553,7 +554,7 @@ class NumericFor extends Stat {
     var i = sta;
     while ((ste > 0 && i <= sto) || (ste <= 0 && i >= sto)) {
       var newEnv = Env(env);
-      newEnv.bind(name, sta);
+      newEnv.bind(name, i);
       try {
         block.exec(newEnv);
       } on BreakException {
@@ -566,7 +567,7 @@ class NumericFor extends Stat {
 
 /// A generic `for` loop statement, can be stopped with `break`.
 /// @see §3.3.5.
-class GenericFor extends Stat {
+final class GenericFor extends Stat {
   GenericFor(this.names, this.exps, this.block);
 
   final List<String> names;
@@ -595,8 +596,8 @@ class GenericFor extends Stat {
 }
 
 /// Function definition (see §3.4.10).
-/// Actually, this isn't strictly needed.
-class FuncDef extends Stat {
+/// Actually, this node isn't strictly needed.
+final class FuncDef extends Stat {
   FuncDef(this.names, this.params, this.block);
 
   final List<String> names;
@@ -619,8 +620,8 @@ class FuncDef extends Stat {
 }
 
 /// Method definition (see §3.4.10).
-/// Actually, this isn't strictly needed.
-class MethDef extends Stat {
+/// Actually, this node isn't strictly needed.
+final class MethDef extends Stat {
   MethDef(this.names, this.method, this.params, this.block);
 
   final List<String> names;
@@ -639,8 +640,8 @@ class MethDef extends Stat {
 }
 
 /// Local function definition (see §3.4.10).
-/// Actually, this isn't strictly needed.
-class LocalFuncDef extends Stat {
+/// Actually, this node isn't strictly needed.
+final class LocalFuncDef extends Stat {
   LocalFuncDef(this.name, this.params, this.block);
 
   final String name;
@@ -655,7 +656,7 @@ class LocalFuncDef extends Stat {
 }
 
 /// Defines and optionally initializes local variables (see §3.3.7).
-class Local extends Stat {
+final class Local extends Stat {
   Local(this.names, this.exps);
 
   final List<String> names;
@@ -672,7 +673,7 @@ class Local extends Stat {
 
 /// A `return` statement.
 /// @see 3.3.4
-class Return extends Stat {
+final class Return extends Stat {
   Return(this.exps);
 
   final List<Exp> exps;
@@ -683,14 +684,14 @@ class Return extends Stat {
 
 /// A `break` statement.
 /// @see 3.3.4
-class Break extends Stat {
+final class Break extends Stat {
   @override
   void exec(Env env) => throw BreakException();
 }
 
 /// Assigment of multiple values.
 /// @see §3.3.3.
-class Assign extends Stat {
+final class Assign extends Stat {
   Assign(this.vars, this.exps);
 
   final List<Exp> vars;
@@ -724,7 +725,7 @@ abstract class Bin extends Exp {
 }
 
 /// Either the first value if not "false" and the second value isn't evaluated or the the second one.
-class Or extends Bin {
+final class Or extends Bin {
   Or(super.left, super.right);
 
   @override
@@ -738,7 +739,7 @@ class Or extends Bin {
 }
 
 /// Either the first value if "false" and the second value isn't evaluated or the second one.
-class And extends Bin {
+final class And extends Bin {
   And(super.left, super.right);
 
   @override
@@ -752,7 +753,7 @@ class And extends Bin {
 }
 
 /// The `<` operation.
-class Lt extends Bin {
+final class Lt extends Bin {
   Lt(super.left, super.right);
 
   @override
@@ -760,7 +761,7 @@ class Lt extends Bin {
 }
 
 /// The `>` operation (implemented as `not <=`).
-class Gt extends Bin {
+final class Gt extends Bin {
   Gt(super.left, super.right);
 
   @override
@@ -768,7 +769,7 @@ class Gt extends Bin {
 }
 
 /// The `<=` operation.
-class Le extends Bin {
+final class Le extends Bin {
   Le(super.left, super.right);
 
   @override
@@ -776,7 +777,7 @@ class Le extends Bin {
 }
 
 /// The `>=` operation (implemented as `not <`).
-class Ge extends Bin {
+final class Ge extends Bin {
   Ge(super.left, super.right);
 
   @override
@@ -784,7 +785,7 @@ class Ge extends Bin {
 }
 
 /// The `~=` operation (implemented as `not ==`).
-class Ne extends Bin {
+final class Ne extends Bin {
   Ne(super.left, super.right);
 
   @override
@@ -792,7 +793,7 @@ class Ne extends Bin {
 }
 
 /// The `==` operation.
-class Eq extends Bin {
+final class Eq extends Bin {
   Eq(super.left, super.right);
 
   @override
@@ -800,7 +801,7 @@ class Eq extends Bin {
 }
 
 /// The `..` operation.
-class Concat extends Bin {
+final class Concat extends Bin {
   Concat(super.left, super.right);
 
   @override
@@ -808,7 +809,7 @@ class Concat extends Bin {
 }
 
 /// The `+` operation.
-class Add extends Bin {
+final class Add extends Bin {
   Add(super.left, super.right);
 
   @override
@@ -816,7 +817,7 @@ class Add extends Bin {
 }
 
 /// The `-` operation.
-class Sub extends Bin {
+final class Sub extends Bin {
   Sub(super.left, super.right);
 
   @override
@@ -824,7 +825,7 @@ class Sub extends Bin {
 }
 
 /// The `*` operation.
-class Mul extends Bin {
+final class Mul extends Bin {
   Mul(super.left, super.right);
 
   @override
@@ -832,7 +833,7 @@ class Mul extends Bin {
 }
 
 /// The `/` operation.
-class Div extends Bin {
+final class Div extends Bin {
   Div(super.left, super.right);
 
   @override
@@ -840,7 +841,7 @@ class Div extends Bin {
 }
 
 /// The `%` operation.
-class Mod extends Bin {
+final class Mod extends Bin {
   Mod(super.left, super.right);
 
   @override
@@ -848,7 +849,7 @@ class Mod extends Bin {
 }
 
 /// The `not` operation.
-class Not extends Exp {
+final class Not extends Exp {
   Not(this.exp);
 
   final Exp exp;
@@ -858,7 +859,7 @@ class Not extends Exp {
 }
 
 /// The unary `-` operation.
-class Neg extends Exp {
+final class Neg extends Exp {
   Neg(this.exp);
 
   final Exp exp;
@@ -868,7 +869,7 @@ class Neg extends Exp {
 }
 
 /// The unary `#` operation (length of strings and tables).
-class Len extends Exp {
+final class Len extends Exp {
   Len(this.exp);
 
   final Exp exp;
@@ -878,7 +879,7 @@ class Len extends Exp {
 }
 
 /// The `^` operation (power).
-class Pow extends Bin {
+final class Pow extends Bin {
   Pow(super.left, super.right);
 
   @override
@@ -886,7 +887,7 @@ class Pow extends Bin {
 }
 
 /// A literal value, i.e. `nil`, `true`, `false`, a number or a string.
-class Lit extends Exp {
+final class Lit extends Exp {
   Lit(this.value);
 
   final Object value;
@@ -896,7 +897,7 @@ class Lit extends Exp {
 }
 
 /// A variable reference.
-class Var extends Exp {
+final class Var extends Exp {
   Var(this.name);
 
   final String name;
@@ -909,7 +910,7 @@ class Var extends Exp {
 }
 
 /// The `[ ]` postfix operation.
-class Index extends Exp {
+final class Index extends Exp {
   Index(this.table, this.key);
 
   final Exp table, key;
@@ -933,7 +934,7 @@ abstract class Call extends Exp {
 }
 
 /// Calling a method.
-class MethCall extends Call {
+final class MethCall extends Call {
   MethCall(this.receiver, this.method, this.args);
 
   final Exp receiver;
@@ -949,7 +950,7 @@ class MethCall extends Call {
 }
 
 /// Calling a function.
-class FuncCall extends Call {
+final class FuncCall extends Call {
   FuncCall(this.func, this.args);
 
   final Exp func;
@@ -960,7 +961,7 @@ class FuncCall extends Call {
 }
 
 /// Defining a function literal bound to the current environment.
-class Func extends Exp {
+final class Func extends Exp {
   Func(this.params, this.block);
 
   final List<String> params;
@@ -971,7 +972,7 @@ class Func extends Exp {
 }
 
 /// Creating a table. See [Field].
-class TableConst extends Exp {
+final class TableConst extends Exp {
   TableConst(this.fields);
 
   final List<Field> fields;
@@ -986,7 +987,7 @@ class TableConst extends Exp {
 
 /// Private class to represent a table field.
 /// See [Table].
-class Field {
+final class Field {
   Field(this.key, this.value);
 
   final Exp? key;
@@ -1007,7 +1008,7 @@ class Field {
 
 /// The scanner breaks the source string into tokens using a fancy regular expression.
 /// Some tokens have an associated value. The empty token represents the end of input.
-class Scanner {
+final class Scanner {
   Scanner(String source)
       : matches = RegExp("\\s*(?:([-+*/%^#(){}\\[\\];:,]|[<>=]=?|~=|\\.{1,3})|(\\d+(?:\\.\\d+)?)|"
                 "(\\w+)|('(?:\\\\.|[^'])*'|\"(?:\\\\.|[^\"])*\"))")
@@ -1068,7 +1069,7 @@ class Scanner {
 // --------------------------------------------------------------------------------------------------------------------
 
 /// The parser combines tokens from a [Scanner] into AST nodes ([Block], [Stat] and [Exp]).
-class Parser {
+final class Parser {
   Parser(this.scanner);
 
   final Scanner scanner;
@@ -1217,7 +1218,7 @@ class Parser {
       var e1 = exp();
       expect(",");
       var e2 = exp();
-      var e3 = at(",") ? exp() : Lit(1);
+      var e3 = at(",") ? exp() : Lit(1.0);
       expect("do");
       var b = block();
       end();
