@@ -1010,40 +1010,66 @@ final class Field {
 /// Some tokens have an associated value. The empty token represents the end of input.
 final class Scanner {
   Scanner(String source)
-      : matches = RegExp("\\s*(?:([-+*/%^#(){}\\[\\];:,]|[<>=]=?|~=|\\.{1,3})|(\\d+(?:\\.\\d+)?)|"
-                "(\\w+)|('(?:\\\\.|[^'])*'|\"(?:\\\\.|[^\"])*\"))")
-            .allMatches(source)
-            .iterator {
+      : matches = RegExp(
+          "\\s*(?:"
+          "(--\\[.*?--]|--.*\$)|"
+          "([-+*/%^#(){}\\[\\];:,]|[<>=]=?|~=|\\.{1,3})|"
+          "(\\d+(?:\\.\\d+)?)|"
+          "(\\w+)|"
+          "('(?:\\\\.|[^'])*'|\"(?:\\\\.|[^\"])*\")|"
+          "(\\[\\[.*?]])"
+          "(.))",
+          multiLine: true,
+          dotAll: true,
+        ).allMatches(_stripHash(source)).iterator {
     advance();
   }
 
   final Iterator<Match> matches;
   Object? value;
-  late String token;
+  late (String, int) token;
+
+  static String _stripHash(String source) {
+    if (source.startsWith("#")) {
+      var index = source.indexOf("\n");
+      return index != -1 ? source.substring(index + 1) : "";
+    }
+    return source;
+  }
 
   void advance() {
     token = nextToken();
   }
 
-  String nextToken() {
+  (String, int) nextToken() {
     if (matches.moveNext()) {
       var match = matches.current;
-      if (match.group(1) != null) {
-        value = match.group(1);
-        return value! as String;
+      if (match[1] != null) return nextToken();
+      if (match[2] != null) {
+        value = match[2];
+        return (value as String, match.start);
       }
-      if (match.group(2) != null) {
-        value = double.parse(match.group(2)!);
-        return "Number";
+      if (match[3] != null) {
+        value = double.parse(match[3]!);
+        return ("Number", match.start);
       }
-      if (match.group(3) != null) {
-        value = match.group(3);
-        return _keywords.contains(value) ? value! as String : "Name";
+      if (match[4] != null) {
+        value = match[4];
+        return (_keywords.contains(value) ? value as String : "Name", match.start);
       }
-      value = unescape(match.group(4)!.substring(1, match.group(4)!.length - 1));
-      return "String";
+      var str1 = match[5];
+      if (str1 != null) {
+        value = unescape(str1.substring(1, str1.length - 1));
+        return ("String", match.start);
+      }
+      var str2 = match[6];
+      if (str2 != null) {
+        value = unescape(str2.substring(2, str2.length - 2));
+        return ("String", match.start);
+      }
+      return ("Error", match.start);
     }
-    return "";
+    return ("", 0);
   }
 
   static String unescape(String s) {
@@ -1082,7 +1108,7 @@ final class Parser {
     return v;
   }
 
-  bool peek(String token) => scanner.token == token;
+  bool peek(String token) => scanner.token.$1 == token;
   bool at(String token) {
     if (peek(token)) {
       scanner.advance();
@@ -1097,7 +1123,7 @@ final class Parser {
 
   bool isEnd() => ["", "else", "elseif", "end", "until"].any(peek);
   void end() => expect("end");
-  Exception error(String message) => Exception("syntax error: $message");
+  Exception error(String message) => Exception("syntax error: $message at ${scanner.token.$2}");
 
   // grammar
 

@@ -60,3 +60,9 @@ Here's the node hierarchy:
                 FuncCall
             Func
             TableConst
+
+I took the [official tests](https://github.com/lua/tests/tree/v5-1) and tried to parse those files. 15 of 24 files could be parsed, 9 throw exceptions. My parser and scanner cannot even report a file position. So I extended the scanner from `String token` to `(String, int) token` to include at least a file offset.
+
+Looks like neither line comments nor block comments were supported.
+
+Also, it looks like only the first statement is ever read as my parser is expecting `;` and not just an end-of-line, which the tests don't do.
