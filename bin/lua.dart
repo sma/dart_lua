@@ -1449,7 +1449,7 @@ final class Parser {
   Exp expPow() {
     var e = expPrim();
     while (at("^")) {
-      e = Pow(e, expPow());
+      e = Pow(e, expUn());
     }
     return e;
   }
