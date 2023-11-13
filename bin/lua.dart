@@ -1125,7 +1125,10 @@ final class Parser {
   }
 
   bool isEnd() => ["", ";", "else", "elseif", "end", "until"].any(peek);
-  void end() => expect("end");
+  void end() {
+    expect("end");
+    scanner.sawEol = true;
+  }
   Exception error(String message) => Exception("syntax error: $message at ${scanner.token.$2}");
 
   // grammar
