@@ -1551,8 +1551,7 @@ final class Parser {
       return Field(k, exp());
     }
     var e = exp();
-    if (e is Var) {
-      expect("=");
+    if (e is Var && at("=")) {
       return Field(Lit(e.name), exp());
     }
     return Field(null, e);
