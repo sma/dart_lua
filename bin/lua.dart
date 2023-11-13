@@ -1012,12 +1012,12 @@ final class Scanner {
   Scanner(String source)
       : matches = RegExp(
           "\\s*(?:"
-          "(--\\[.*?--]|--.*\$)|"
+          "(--\\[.*?--]|--[^\n]*\$)|"
+          "(\\[\\[.*?]])|"
           "([-+*/%^#(){}\\[\\];:,]|[<>=]=?|~=|\\.{1,3})|"
           "(\\d+(?:\\.\\d+)?)|"
           "(\\w+)|"
           "('(?:\\\\.|[^'])*'|\"(?:\\\\.|[^\"])*\")|"
-          "(\\[\\[.*?]])"
           "(.))",
           multiLine: true,
           dotAll: true,
@@ -1044,25 +1044,26 @@ final class Scanner {
   (String, int) nextToken() {
     if (matches.moveNext()) {
       var match = matches.current;
+      if (match[0]!.trim().isEmpty) return ('', match.end);
       if (match[1] != null) return nextToken();
-      if (match[2] != null) {
-        value = match[2];
+      if (match[3] != null) {
+        value = match[3];
         return (value as String, match.start);
       }
-      if (match[3] != null) {
-        value = double.parse(match[3]!);
+      if (match[4] != null) {
+        value = double.parse(match[4]!);
         return ("Number", match.start);
       }
-      if (match[4] != null) {
-        value = match[4];
+      if (match[5] != null) {
+        value = match[5];
         return (_keywords.contains(value) ? value as String : "Name", match.start);
       }
-      var str1 = match[5];
+      var str1 = match[6];
       if (str1 != null) {
         value = unescape(str1.substring(1, str1.length - 1));
         return ("String", match.start);
       }
-      var str2 = match[6];
+      var str2 = match[2];
       if (str2 != null) {
         value = unescape(str2.substring(2, str2.length - 2));
         return ("String", match.start);
