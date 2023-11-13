@@ -6,10 +6,11 @@ import 'lua.dart';
 void main() {
   var c = 0, d = 0;
   for (final file in Directory('lua/tests').listSync().whereType<File>()) {
+    if (['main', 'all', 'literals'].any(file.path.contains)) continue;
     print('${file.path}...');
     try {
       scan(file.readAsStringSync(encoding: latin1));
-      // parse(file.readAsStringSync(encoding: latin1));
+      parse(file.readAsStringSync(encoding: latin1));
       c++;
     } catch (e) {
       print(e);
@@ -31,10 +32,13 @@ void scan(String source) {
 
 void parse(String source) {
   final parser = Parser(Scanner(source));
-  parser.block();
-  // if (!parser.at('')) {
-  //   throw 'Expected end of input';
-  // }
+  while(parser.scanner.token.$1 != '') {
+    parser.stat();
+    // print(parser.stat().s);
+  }
+  if (!parser.at('')) {
+    throw 'Expected end of input';
+  }
 }
 
 extension on Stat {
@@ -56,7 +60,7 @@ extension on Stat {
         Local(:final names, :final exps) => 'local ${names.join(', ')} = ${exps.s(', ')}',
         Return(:final exps) => 'return ${exps.s(', ')}',
         Break() => 'break',
-        Assign(:final vars, :final exps) => '${vars.join(', ')} = ${exps.s(', ')}',
+        Assign(:final vars, :final exps) => '${vars.s(', ')} = ${exps.s(', ')}',
         Or(:final left, :final right) => '${left.s} or ${right.s}',
         And(:final left, :final right) => '${left.s} and ${right.s}',
         Lt(:final left, :final right) => '${left.s} < ${right.s}',
