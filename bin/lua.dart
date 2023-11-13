@@ -1028,6 +1028,7 @@ final class Scanner {
   final Iterator<Match> matches;
   Object? value;
   late (String, int) token;
+  bool sawEol = false;
 
   static String _stripHash(String source) {
     if (source.startsWith("#")) {
@@ -1044,6 +1045,7 @@ final class Scanner {
   (String, int) nextToken() {
     if (matches.moveNext()) {
       var match = matches.current;
+      sawEol = match[0]!.contains("\n");
       if (match[0]!.trim().isEmpty) return ('', match.end);
       if (match[1] != null) return nextToken();
       if (match[4] != null) {
@@ -1122,7 +1124,7 @@ final class Parser {
     if (!at(token)) throw error("expected $token");
   }
 
-  bool isEnd() => ["", "else", "elseif", "end", "until"].any(peek);
+  bool isEnd() => ["", ";", "else", "elseif", "end", "until"].any(peek);
   void end() => expect("end");
   Exception error(String message) => Exception("syntax error: $message at ${scanner.token.$2}");
 
@@ -1138,7 +1140,8 @@ final class Parser {
     var nodes = <Stat>[];
     if (!isEnd()) {
       nodes.add(stat());
-      while (at(";")) {
+      while (at(";") || scanner.sawEol) {
+        if (isEnd()) break;
         nodes.add(stat());
       }
     }
