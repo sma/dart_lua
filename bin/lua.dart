@@ -1014,8 +1014,8 @@ final class Scanner {
           "\\s*(?:"
           "(--\\[.*?--]|--[^\n]*\$)|"
           "(\\[\\[.*?]])|"
+          "((?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?)|"
           "([-+*/%^#(){}\\[\\];:,]|[<>=]=?|~=|\\.{1,3})|"
-          "(\\d+(?:\\.\\d+)?)|"
           "(\\w+)|"
           "('(?:\\\\.|[^'])*'|\"(?:\\\\.|[^\"])*\")|"
           "(.))",
@@ -1046,12 +1046,12 @@ final class Scanner {
       var match = matches.current;
       if (match[0]!.trim().isEmpty) return ('', match.end);
       if (match[1] != null) return nextToken();
-      if (match[3] != null) {
-        value = match[3];
+      if (match[4] != null) {
+        value = match[4];
         return (value as String, match.start);
       }
-      if (match[4] != null) {
-        value = double.parse(match[4]!);
+      if (match[3] != null) {
+        value = double.parse(match[3]!);
         return ("Number", match.start);
       }
       if (match[5] != null) {
