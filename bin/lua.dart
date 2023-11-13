@@ -1378,7 +1378,7 @@ final class Parser {
 
   Exp expCmp() {
     var e = expConcat();
-    while (["<", ">", "<=", "=>", "~=", "=="].any(peek)) {
+    while (["<", ">", "<=", ">=", "~=", "=="].any(peek)) {
       if (at("<")) {
         e = Lt(e, expConcat());
       } else if (at(">")) {
