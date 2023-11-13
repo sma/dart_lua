@@ -1227,7 +1227,7 @@ final class Parser {
     expect("then");
     Block b1 = block(), b2;
     if (at("elseif")) {
-      b2 = Block([statIf()]);
+      return If(e, b1, Block([statIf()]));
     } else if (at("else")) {
       b2 = block();
     } else {
